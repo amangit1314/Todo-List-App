@@ -25,7 +25,10 @@ class IntrayTodo extends StatelessWidget {
       ),
       child: Row(
         children: <Widget>[
-          Radio(),
+          Radio(
+            onChanged: null,
+            value: null,
+          ),
           Column(
             children: <Widget>[
               Text(
