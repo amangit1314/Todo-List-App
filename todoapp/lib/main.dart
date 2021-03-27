@@ -1,113 +1,284 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:todoapp/UI/Login/loginscreen.dart';
+import 'package:todoapp/bloc/resources/repository.dart';
+import 'UI/Intray/intray_page.dart';
+import 'models/global.dart';
+import 'package:todoapp/bloc/blocs/user_bloc_provider.dart';
 
-void main() {
-  runApp(MyApp());
-}
+void main() => runApp(MyApp());
 
 class MyApp extends StatelessWidget {
   // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
-      theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // Try running your application with "flutter run". You'll see the
-        // application has a blue toolbar. Then, without quitting the app, try
-        // changing the primarySwatch below to Colors.green and then invoke
-        // "hot reload" (press "r" in the console where you ran "flutter run",
-        // or simply save your changes to "hot reload" in a Flutter IDE).
-        // Notice that the counter didn't reset back to zero; the application
-        // is not restarted.
-        primarySwatch: Colors.blue,
-      ),
-      home: MyHomePage(title: 'Flutter Demo Home Page'),
-    );
+        debugShowCheckedModeBanner: false,
+        title: 'Todo App',
+        theme: ThemeData(
+            primarySwatch: Colors.grey,
+            dialogBackgroundColor: Colors.transparent),
+        home: MyHomePage()
+        //     );
+        //   },
+        // );// unreachable
+        //   },
+        // ),
+        );
   }
 }
 
 class MyHomePage extends StatefulWidget {
-  MyHomePage({Key key, this.title}) : super(key: key);
-
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
-
-  final String title;
-
   @override
   _MyHomePageState createState() => _MyHomePageState();
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
+  TaskBloc tasksBloc;
+  String apiKey = "";
+  Repository _repository = Repository();
 
-  void _incrementCounter() {
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder(
+      future: signinUser(),
+      builder: (BuildContext context, AsyncSnapshot snapshot) {
+        if (snapshot.hasData) {
+          apiKey = snapshot.data;
+          tasksBloc = TaskBloc(apiKey);
+          print(apiKey);
+        } else {
+          print("No data");
+        }
+        // String apiKey = snapshot.data;
+        //apiKey.length > 0 ? getHomePage() :
+        return apiKey.length > 0
+            ? getHomePage()
+            : LoginPage(
+                login: login,
+                newUser: false,
+              );
+      },
+    );
+  }
+
+  void login() {
     setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
+      build(context);
+    });
+  }
+
+  Future signinUser() async {
+    String userName = "";
+    apiKey = await getApiKey();
+    if (apiKey != null) {
+      if (apiKey.length > 0) {
+        userBloc.signinUser("", "", apiKey);
+      } else {
+        print("No api key");
+      }
+    } else {
+      apiKey = "";
+    }
+    return apiKey;
+  }
+
+  Future getApiKey() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    return await prefs.getString("API_Token");
+  }
+
+  Widget getHomePage() {
+    return MaterialApp(
+      color: Colors.yellow,
+      home: SafeArea(
+        child: DefaultTabController(
+          length: 3,
+          child: new Scaffold(
+            body: Stack(children: <Widget>[
+              TabBarView(
+                children: [
+                  IntrayPage(
+                    apiKey: apiKey,
+                  ),
+                  new Container(
+                    color: Colors.orange,
+                  ),
+                  new Container(
+                    child: Center(
+                      child: FlatButton(
+                        color: redColor,
+                        child: Text("Log out"),
+                        onPressed: () {
+                          logout();
+                        },
+                      ),
+                    ),
+                    color: Colors.lightGreen,
+                  ),
+                ],
+              ),
+              Container(
+                padding: EdgeInsets.only(left: 50),
+                height: 160,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.only(
+                      bottomLeft: Radius.circular(50),
+                      bottomRight: Radius.circular(50)),
+                  color: Colors.white,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: <Widget>[
+                    Text(
+                      "Intray",
+                      style: intrayTitleStyle,
+                    ),
+                    Container()
+                  ],
+                ),
+              ),
+              Container(
+                height: 80,
+                width: 80,
+                margin: EdgeInsets.only(
+                    top: 120,
+                    left: MediaQuery.of(context).size.width * 0.5 - 40),
+                child: FloatingActionButton(
+                  child: Icon(
+                    Icons.add,
+                    size: 70,
+                  ),
+                  backgroundColor: redColor,
+                  onPressed: _showAddDialog,
+                ),
+              )
+            ]),
+            appBar: AppBar(
+              elevation: 0,
+              title: new TabBar(
+                tabs: [
+                  Tab(
+                    icon: new Icon(Icons.home),
+                  ),
+                  Tab(
+                    icon: new Icon(Icons.rss_feed),
+                  ),
+                  Tab(
+                    icon: new Icon(Icons.perm_identity),
+                  ),
+                ],
+                labelColor: darkGreyColor,
+                unselectedLabelColor: Colors.blue,
+                indicatorSize: TabBarIndicatorSize.label,
+                indicatorPadding: EdgeInsets.all(5.0),
+                indicatorColor: Colors.transparent,
+              ),
+              backgroundColor: Colors.white,
+            ),
+            backgroundColor: Colors.white,
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showAddDialog() {
+    TextEditingController taskName = new TextEditingController();
+    TextEditingController deadline = new TextEditingController();
+    // flutter defined function
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        // return object of type Dialog
+        return AlertDialog(
+          content: Container(
+            padding: EdgeInsets.all(20),
+            constraints: BoxConstraints.expand(
+              height: 250,
+            ),
+            decoration: BoxDecoration(
+                borderRadius: BorderRadius.all(Radius.circular(13)),
+                color: darkGreyColor),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: <Widget>[
+                Text("Add New Task", style: whiteTitle),
+                Container(
+                  child: TextField(
+                    controller: taskName,
+                    decoration: InputDecoration(
+                      hintText: "Name of task",
+                      enabledBorder: UnderlineInputBorder(
+                        borderSide: BorderSide(color: Colors.white),
+                      ),
+                    ),
+                  ),
+                ),
+                Container(
+                  child: TextField(
+                    controller: deadline,
+                    decoration: InputDecoration(
+                      hintText: "Deadline",
+                      enabledBorder: UnderlineInputBorder(
+                        borderSide: BorderSide(color: Colors.white),
+                      ),
+                    ),
+                  ),
+                ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: <Widget>[
+                    RaisedButton(
+                      color: redColor,
+                      child: Text(
+                        "Cancel",
+                        style: whiteButtonTitle,
+                      ),
+                      onPressed: () {
+                        Navigator.pop(context);
+                      },
+                    ),
+                    RaisedButton(
+                      color: redColor,
+                      child: Text(
+                        "Add",
+                        style: whiteButtonTitle,
+                      ),
+                      onPressed: () {
+                        if (taskName.text != null) {
+                          addTask(taskName.text, deadline.text);
+                          Navigator.pop(context);
+                        }
+                      },
+                    ),
+                  ],
+                )
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void addTask(String taskName, String deadline) async {
+    print(apiKey);
+    await _repository.addUserTask(this.apiKey, taskName, deadline);
+  }
+
+  logout() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setString("API_Token", "");
+    setState(() {
+      build(context);
     });
   }
 
   @override
-  Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
-    return Scaffold(
-      appBar: AppBar(
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
-      ),
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
-        child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Invoke "debug painting" (press "p" in the console, choose the
-          // "Toggle Debug Paint" action from the Flutter Inspector in Android
-          // Studio, or the "Toggle Debug Paint" command in Visual Studio Code)
-          // to see the wireframe for each widget.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            Text(
-              'You have pushed the button this many times:',
-            ),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headline4,
-            ),
-          ],
-        ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: Icon(Icons.add),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
-    );
+  void initState() {
+    super.initState();
   }
 }

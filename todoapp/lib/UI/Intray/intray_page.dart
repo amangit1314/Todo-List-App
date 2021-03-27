@@ -1,5 +1,10 @@
 import 'package:flutter/material.dart';
 
+import '../../bloc/blocs/user_bloc_provider.dart';
+import '../../models/classes/task.dart';
+import '../../models/global.dart';
+import '../../models/widgets/intray_todo_widget.dart';
+
 class IntrayPage extends StatefulWidget {
   final String apiKey;
   IntrayPage({this.apiKey});
@@ -12,6 +17,7 @@ class _IntrayPageState extends State<IntrayPage> {
   TaskBloc tasksBloc;
 
   @override
+  // ignore: must_call_super
   void initState() {
     tasksBloc = TaskBloc(widget.apiKey);
   }
@@ -80,6 +86,7 @@ class _IntrayPageState extends State<IntrayPage> {
     );
   }
 
+  // ignore: unused_element
   void _onReorder(int oldIndex, int newIndex) {
     setState(() {
       if (newIndex > oldIndex) {
